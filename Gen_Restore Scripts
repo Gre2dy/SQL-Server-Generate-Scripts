@@ -1,0 +1,134 @@
+SET NOCOUNT ON
+
+Declare @dbname varchar(20)
+Declare @Logicalname sysname
+Declare @FileType int
+Declare @RestorePath varchar(200)
+    set @RestorePath = 'C:\mssql\' --- restore Target Path
+Declare @BackupPath varchar(200)
+    set @BackupPath = 'C:\mssql\HyunsDB.bak' --- Backup File Path
+Declare @HeaderInfoQuery varchar(200)
+    set @HeaderInfoQuery = 'restore Headeronly from disk = ' + char(39) + @BackupPath + char(39)
+Declare @FilelistInfoQuery varchar(200)
+    set @FilelistInfoQuery = 'restore filelistonly from disk = ' + char(39) + @BackupPath + char(39)
+Declare @Filecnt int
+Declare @loop int = 1
+DECLARE @backupInfo TABLE
+(
+    BackupName nvarchar(128),
+    BackupDescription nvarchar(255),
+    BackupType smallint,
+    ExpirationDate datetime,
+    Compressed bit,
+    Position smallint,
+    DeviceType tinyint, 
+    UserName nvarchar(128),
+    ServerName nvarchar(128),
+    DatabaseName nvarchar(128),
+    DatabaseVersion int,
+    DatabaseCreationDate datetime,
+    BackupSize numeric(20, 0),
+    FirstLSN numeric(25, 0),
+    LastLSN numeric(25, 0),
+    CheckpointLSN numeric(25, 0),
+    DatabaseBackupLSN numeric(25, 0),
+    BackupStartDate datetime,
+    BackupFinishDate datetime,
+    SortOrder smallint,
+    [CodePage] smallint,
+    UnicodeLocaleId int,
+    UnicodeComparisonStyle int,
+    CompatibilityLevel tinyint,
+    SoftwareVendorId int,
+    SoftwareVersionMajor int,
+    SoftwareVersionMinor int,
+    SoftwareVersionBuild int,
+    MachineName nvarchar(128),
+    Flags int,
+    BindingId uniqueidentifier,
+    RecoveryForkId uniqueidentifier,
+    Collation nvarchar(128),
+    FamilyGUID uniqueidentifier,
+    HasBulkLoggedData bit,
+    IsSnapshot bit,
+    IsReadOnly bit,
+    IsSingleUser bit,
+    HasBackupChecksums bit,
+    IsDamaged bit,
+    BeginsLogChain bit,
+    HasIncompleteMetaData bit,
+    IsForceOffline bit,
+    IsCopyOnly bit,
+    FirstRecoveryForkID uniqueidentifier,
+    ForkPointLSN numeric(25, 0),
+    RecoveryModel nvarchar(60),
+    DifferentialBaseLSN numeric(25, 0),
+    DifferentialBaseGUID uniqueidentifier,
+    BackupTypeDescription nvarchar(60),
+    BackupSetGUID uniqueidentifier,
+    CompressedBackupSize bigint,
+    Containment tinyint,
+    KeyAlgorithm nvarchar(32),
+    EncryptorThumbprint varbinary(20),
+    EncryptorType nvarchar(32)
+)
+insert into @backupInfo
+exec (@HeaderInfoQuery)
+
+set @dbname = (select top 1 DatabaseName from @backupInfo)
+
+Declare @RestoreTBL table(
+    Seq int identity(1,1)
+,    LogicalName varchar(20)
+,   PhysicalName nvarchar(200)
+,   Type varchar(10)
+,   FileGroupName varchar(20)
+,   Size bigint
+,   MaxSize bigint
+,   FileID int
+,   CreateLSN bigint
+,   DropLSN bigint
+,   UniqueID nvarchar(200)
+,   ReadOnlyLSN nvarchar(200)
+,   ReadWriteLSN nvarchar(200)
+,   BackupSizeInBytes bigint
+,   SourceBlockSize int
+,   FileGroupID int
+,   LogGroupGUID nvarchar(200)
+,   DifferentialBaseLSN int
+,   DifferentialBaseGUID nvarchar(200)
+,   IsReadOnly smallint
+,   IsPresent smallint
+,   TDEThumbprint nvarchar(20)
+,   Snapshoturl nvarchar(20)
+) 
+insert into @RestoreTBL
+exec(@FilelistInfoQuery)
+set @filecnt = @@rowcount
+print 'RESTORE DATABASE ' + @dbname + ' FROM DISK = ' + char(39) + @backupPath + char(39) + ' WITH'
+WHILE(@loop<=@Filecnt)
+BEGIN
+    SELECT
+        @Logicalname = Logicalname
+    ,   @FileType = FileID
+            FROM @RestoreTBL where Seq = @loop
+        
+        IF @FileType = 1
+            BEGIN
+                PRINT 'MOVE ' + char(39) + @logicalname + char(39) + ' TO ' + char(39) + @RestorePath + @logicalname + '.mdf' + char(39)
+            END
+        
+        IF @FileType = 2
+            BEGIN
+                PRINT ',MOVE ' + char(39) + @logicalname + char(39) + ' TO ' + char(39) + @RestorePath + @logicalname + '.ldf' + char(39)
+                end
+        IF @FileType > 2
+            BEGIN
+                Print ',MOVE ' + char(39) + @logicalname + char(39) + ' TO ' + char(39) + @RestorePath + @logicalname + '.ndf' + char(39)
+                end
+        
+
+            set @loop = @loop + 1
+            
+END
+SET NOCOUNT OFF
