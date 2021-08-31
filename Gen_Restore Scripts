@@ -13,6 +13,7 @@ Declare @FilelistInfoQuery varchar(200)
     set @FilelistInfoQuery = 'restore filelistonly from disk = ' + char(39) + @BackupPath + char(39)
 Declare @Filecnt int
 Declare @loop int = 1
+
 DECLARE @backupInfo TABLE
 (
     BackupName nvarchar(128),
@@ -104,8 +105,10 @@ Declare @RestoreTBL table(
 ) 
 insert into @RestoreTBL
 exec(@FilelistInfoQuery)
+
 set @filecnt = @@rowcount
 print 'RESTORE DATABASE ' + @dbname + ' FROM DISK = ' + char(39) + @backupPath + char(39) + ' WITH'
+
 WHILE(@loop<=@Filecnt)
 BEGIN
     SELECT
