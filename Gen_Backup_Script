@@ -1,0 +1,33 @@
+	SET NOCOUNT ON
+	
+	Declare @dbid smallint
+	Declare @DBname sysname
+	Declare @Fileloop smallint = 1
+	Declare @dbloop smallint = 1
+	Declare @DBcnt smallint
+	Declare @Filecnt smallint
+	Declare @LogicalName sysname
+	Declare @PhysicalName sysname
+	Declare @BackupPath varchar(300)
+		set @BackupPath = 'C:\mssql\'
+	
+	Declare @DBTABLE table( --- 변수테이블 생성
+		Seq	 int identity(1,1)
+	,	DatabaseName sysname
+	,	DatabaseID smallint
+	)
+	insert into @DBTABLE
+		select name, database_id from sys.databases where database_id > 4  --- 변수 테이블에 sys.databases 값 정의
+	
+		SET @DBCNT = @@ROWCOUNT
+		
+	WHILE(@DBLOOP <= @DBCNT) --- @DBNAME과 @DBID에 databasename 및 databaseid 를 하나씩 무한루프로 삽입
+		BEGIN
+			SELECT
+				@DBNAME = DatabaseName
+			,	@DBID = DatabaseID
+				FROM @DBTABLE where Seq = @dbloop ---여기서 모든 열의 출력이 끝나면
+					SET @DBLOOP = @DBLOOP  + 1--- 여기서 @DBLOOP에 1을 추가해서 Loop 하나 끝날때 마다 seq 1씩 증가
+	
+		PRINT 'Backup Database ' + @DBNAME + ' to disk = ' +Char(39) + @BackupPath+  @DBNAME + '.' + 'bak'+ Char(39) + ' WITH COMPRESSION'--- @DBNAME에 삽입된 DatabaseName 출력
+END
