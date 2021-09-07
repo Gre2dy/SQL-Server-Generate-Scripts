@@ -1,0 +1,70 @@
+SET NOCOUNT ON
+ 
+DECLARE @dbloop          smallint = 1
+DECLARE @dbcnt           smallint
+DECLARE @DBName          sysname
+DECLARE @DBID            smallint
+DECLARE @fileLoop        smallint = 1
+DECLARE @filecnt         smallint
+DECLARE @logicalName     sysname
+DECLARE @physicalName    sysname
+
+ 
+DECLARE @restoreDB TABLE
+(
+	SeqNo					int             NOT NULL IDENTITY(1,1)
+,	DatabaseName			sysname			NULL
+,	DatabaseID				smallint		NULL
+)
+ 
+CREATE TABLE #DBFilelist
+(
+	SeqNo					int             NOT NULL IDENTITY(1,1)
+,	LogicalName				sysname         NULL
+,	PhysicalName			sysname			NULL
+)
+ 
+INSERT INTO @restoreDB (DatabaseName, DatabaseID)
+SELECT name, database_id FROM sys.databases WHERE database_id > 4
+ 
+SET @dbcnt = @@ROWCOUNT
+ 
+WHILE (@dbloop <= @dbcnt)
+BEGIN
+SELECT @DBName = DatabaseName, @DBID = DatabaseID
+  FROM @restoreDB 
+ WHERE SeqNo = @dbloop
+ 
+INSERT INTO #DBFilelist(LogicalName, PhysicalName)
+SELECT name, filename FROM sys.sysaltfiles WHERE dbid = @DBID
+SET @filecnt = @@ROWCOUNT
+ 
+PRINT 'CREATE DATABASE [' + @DBName + '] ON '
+ 
+WHILE (@fileLoop <= @filecnt)
+BEGIN
+         SELECT 
+                @logicalName = LogicalName
+         ,       @physicalName = PhysicalName 
+         FROM #DBFilelist 
+         WHERE SeqNo = @fileLoop
+         
+         IF @fileLoop = 1
+                PRINT '   (FILENAME = ' + CHAR(39) + @physicalName + CHAR(39) + ')'
+         ELSE 
+                PRINT ',  (FILENAME = ' + CHAR(39) + @physicalName + CHAR(39) + ')'
+ 
+         SET @fileLoop = @fileLoop + 1
+                       
+END
+ 
+PRINT 'FOR ATTACH'
+PRINT 'GO'
+PRINT ''
+TRUNCATE TABLE #DBFilelist
+SET @fileLoop = 1
+SET @dbloop = @dbloop + 1
+END
+
+DROP TABLE #DBFilelist
+SET NOCOUNT OFF
