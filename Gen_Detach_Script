@@ -1,0 +1,26 @@
+SET NOCOUNT ON
+
+Declare @dbloop smallint = 1
+Declare @dbcnt smallint 
+Declare @DBNAME sysname
+
+Declare @DBLIST table(
+	Seq	int	identity(1,1)
+,	DatabaseName sysname
+)
+
+insert into @DBLIST
+	select name from sys.databases where database_id > 4
+Set @dbcnt = @@rowcount
+
+WHILE(@dbloop<=@dbcnt)
+	begin
+		select
+			@DBNAME = DatabaseName
+
+				FROM @DBLIST where Seq = @dbloop
+
+
+				print 'exec sp_detach_db @dbname = ' + char(39) +@DBNAME + char(39)
+				Set @dbloop = @dbloop + 1
+End
