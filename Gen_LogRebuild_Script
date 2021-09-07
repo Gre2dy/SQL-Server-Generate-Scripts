@@ -1,0 +1,71 @@
+SET NOCOUNT ON
+
+Declare @dbloop smallint = 1
+Declare @dbcnt smallint
+Declare @PhysicalPath sysname
+Declare @filename sysname
+Declare @dbname sysname
+Declare @Fileloop smallint =1 
+Declare @Filecnt smallint
+Declare @DBID smallint
+
+
+Declare @DBTABLE table(
+	Seq	int	identity(1,1)
+,	DatabaseName sysname
+,	DatabaseID smallint
+)
+
+Create table #Filelist(
+	Seq	int	identity(1,1)
+,	filename sysname
+,	PhysicalPath sysname
+)
+
+insert into @DBTABLE
+	select name, database_id from sys.databases where database_id > 4 and state = 3
+SET @dbcnt = @@rowcount
+
+WHILE(@dbloop<=@dbcnt)
+	BEGIN
+		SELECT
+			@DBNAME = DatabaseName
+		,	@dbid = databaseid
+				FROM @DBTABLE a where Seq = @dbloop
+
+				print 'ALTER DATABASE ' + @dbname + ' SET OFFLINE' + '-- MSSQL 서비스와 DB 파일 분리 하기 위해 선행'
+				print 'DROP DATABASE ' + @dbname + '-- MSSQL 서비스에서 제거'
+
+insert into #Filelist
+	select name, filename from sys.sysaltfiles where dbid = @dbid and fileid <> 2
+SET @filecnt = @@rowcount				
+				
+
+
+WHILE(@Fileloop<=@Filecnt)
+	BEGIN
+		SELECT
+			@PhysicalPath = PhysicalPath
+		,	@filename = filename
+			FROM #Filelist where Seq = @Fileloop
+
+			IF @Fileloop = 1
+				PRINT 'CREATE DATABASE ' + @dbname + ' ON (NAME = ' +char(39) + @filename + char(39) + ', FILENAME = ' + char(39) + @PhysicalPath + CHAR(39) + ')'
+			ELSE 
+				PRINT ', (NAME = ' + char(39) + @filename + char(39) + ', FILENAME = ' + char(39) + @PhysicalPath + char(39) + ')'
+				
+			
+		
+
+				SET @Fileloop = @Fileloop + 1
+
+				END
+				print 'FOR ATTACH_FORCE_REBUILD_LOG'
+				PRINT '----------------------------------------------'
+				TRUNCATE table #Filelist
+				SET @FILELOOP = 1
+				SET @DBLOOP = @DBLOOP + 1
+
+				END
+				
+DROP TABLE #FILELIST
