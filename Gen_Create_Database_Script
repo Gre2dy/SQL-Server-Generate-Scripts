@@ -1,0 +1,42 @@
+SET NOCOUNT ON
+
+Declare @dbname  sysname
+	SET @DBNAME ='TESTS' --- db명 변경 필요
+Declare @name sysname
+Declare @filecnt smallint
+Declare @fileloop nvarchar(20) = 1
+Declare @Path nvarchar(50) 
+Declare @Size varchar(20)
+	SET @Size = 8192
+Declare @FileGrowth  varchar(20)
+	SET @FileGrowth = 65536
+
+Declare @PathTBL table(
+	Value varchar(20)
+,	Path nvarchar(20)
+	)
+	insert into @PathTBL(value, Path)
+		exec  xp_instance_regread N'HKEY_LOCAL_MACHINE', N'Software\Microsoft\MSSQLServer\MSSQLServer', N'DefaultData'
+
+		set @filecnt = @@rowcount
+		
+		select
+			@Path = Path
+				from @PathTBL
+
+
+Print 'Create Database [' + @dbname + '] ON PRIMARY'
+WHILE(@fileloop<= 4)
+	BEGIN
+
+		if @fileloop = 1
+		print ' ( Name = '  + char(39) +@dbname + char(39) + ', FILENAME = ' + char(39) + @Path  + '\'+ @dbname + '.mdf' + char(39) + ', ' + 'SIZE = ' + @Size +'KB, ' + 'FILEGROWTH = ' + @FILEGROWTH + 'KB )'
+		else 
+			Print ',( Name = '  + char(39) +@name + char(39) +  ', FILENAME = ' + char(39) + @Path + '\' + @name + '.ndf' + char(39) + ', ' + 'SIZE = ' + @Size +'KB, ' + 'FILEGROWTH = ' + @FILEGROWTH + 'KB )'
+		set @fileloop = @fileloop + 1
+		set @name = @dbname + @fileloop
+		
+		END
+
+		Print 'LOG ON'
+Print ' ( Name = ' + char(39) + @dbname + '_log' + char(39) + ', FILENAME = ' + char(39) + @Path + '\' + @dbname + '_log' + '.ldf' + char(39) + ', ' + 'SIZE = ' + @Size +'KB, ' + 'FILEGROWTH = ' + @FILEGROWTH + 'KB )'
